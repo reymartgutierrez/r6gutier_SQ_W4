@@ -1,0 +1,421 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Wavelength — The Story Game</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Unbounded:wght@400;700;900&family=DM+Sans:ital,wght@0,300;0,400;0,500;1,300&display=swap" rel="stylesheet">
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --orange:   #FF5C00;
+      --yellow:   #FFD600;
+      --pink:     #FF3CAC;
+      --teal:     #00C9B1;
+      --blue:     #2B4BFF;
+      --purple:   #7B2FFF;
+      --cream:    #FFF8EE;
+      --ink:      #111010;
+      --stripe-h: 52px;
+    }
+
+    html, body {
+      height: 100%;
+      background: var(--cream);
+      color: var(--ink);
+      font-family: 'DM Sans', sans-serif;
+      font-size: 17px;
+      overflow-x: hidden;
+    }
+
+    /* ── STRIPE HEADER ── */
+    .stripe-bar {
+      width: 100%;
+      height: var(--stripe-h);
+      display: flex;
+      position: fixed;
+      top: 0;
+      left: 0;
+      z-index: 100;
+    }
+    .stripe-bar span {
+      flex: 1;
+      display: block;
+    }
+    .s1 { background: var(--orange); }
+    .s2 { background: var(--yellow); }
+    .s3 { background: var(--pink); }
+    .s4 { background: var(--teal); }
+    .s5 { background: var(--blue); }
+    .s6 { background: var(--purple); }
+
+    /* ── STRIPE FOOTER ── */
+    .stripe-bar.bottom {
+      top: auto;
+      bottom: 0;
+      height: 14px;
+    }
+
+    /* ── LAYOUT ── */
+    #wrapper {
+      min-height: 100vh;
+      padding: calc(var(--stripe-h) + 2rem) 1.5rem 3rem;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+    }
+
+    /* ── LOGO ── */
+    .logo-block {
+      text-align: center;
+      margin-bottom: 2rem;
+    }
+    .logo-title {
+      font-family: 'Unbounded', sans-serif;
+      font-weight: 900;
+      font-size: clamp(2rem, 8vw, 3.8rem);
+      line-height: 1;
+      letter-spacing: -0.03em;
+      background: linear-gradient(135deg, var(--orange) 0%, var(--pink) 40%, var(--purple) 80%);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+    }
+    .logo-sub {
+      font-family: 'Unbounded', sans-serif;
+      font-size: 0.6rem;
+      font-weight: 400;
+      letter-spacing: 0.35em;
+      text-transform: uppercase;
+      color: #888;
+      margin-top: 0.5rem;
+    }
+
+    /* ── SPECTRUM VISUAL ── */
+    .spectrum-bar {
+      width: 100%;
+      max-width: 640px;
+      margin-bottom: 1.2rem;
+      position: relative;
+    }
+    .spectrum-track {
+      height: 22px;
+      border-radius: 999px;
+      background: linear-gradient(to right,
+        var(--blue) 0%,
+        var(--teal) 25%,
+        var(--yellow) 50%,
+        var(--orange) 75%,
+        var(--pink) 100%
+      );
+      position: relative;
+      overflow: visible;
+    }
+    .spectrum-labels {
+      display: flex;
+      justify-content: space-between;
+      margin-top: 0.4rem;
+      font-family: 'Unbounded', sans-serif;
+      font-size: 0.55rem;
+      font-weight: 700;
+      letter-spacing: 0.05em;
+      text-transform: uppercase;
+      color: #555;
+    }
+
+    /* Needle */
+    .spectrum-needle {
+      position: absolute;
+      top: -6px;
+      width: 4px;
+      height: 34px;
+      background: var(--ink);
+      border-radius: 2px;
+      transform: translateX(-50%);
+      transition: left 0.8s cubic-bezier(0.34, 1.56, 0.64, 1);
+      box-shadow: 0 2px 8px rgba(0,0,0,0.3);
+    }
+    .spectrum-needle::after {
+      content: '';
+      position: absolute;
+      bottom: -6px;
+      left: 50%;
+      transform: translateX(-50%);
+      width: 12px;
+      height: 12px;
+      background: var(--ink);
+      border-radius: 50%;
+    }
+
+    /* Bullseye zones */
+    .bullseye {
+      position: absolute;
+      top: 0; bottom: 0;
+      border-radius: 999px;
+      opacity: 0;
+      transition: opacity 0.4s;
+    }
+    .bullseye.show { opacity: 1; }
+
+    /* ── CLUE CHIP ── */
+    .clue-display {
+      max-width: 640px;
+      width: 100%;
+      margin-bottom: 1.5rem;
+      display: none;
+    }
+    .clue-display.visible { display: flex; align-items: center; gap: 1rem; }
+    .clue-label {
+      font-family: 'Unbounded', sans-serif;
+      font-size: 0.55rem;
+      font-weight: 700;
+      letter-spacing: 0.2em;
+      text-transform: uppercase;
+      color: #999;
+      white-space: nowrap;
+    }
+    .clue-word {
+      font-family: 'Unbounded', sans-serif;
+      font-size: clamp(1.1rem, 4vw, 1.6rem);
+      font-weight: 900;
+      background: var(--ink);
+      color: var(--cream);
+      padding: 0.3em 0.8em;
+      display: inline-block;
+      letter-spacing: -0.02em;
+    }
+
+    /* ── MAIN CARD ── */
+    #game {
+      width: 100%;
+      max-width: 640px;
+      background: #fff;
+      border: 3px solid var(--ink);
+      padding: 2.5rem;
+      position: relative;
+      opacity: 0;
+      transform: translateY(20px) scale(0.98);
+      transition: opacity 0.4s ease, transform 0.4s ease;
+      box-shadow: 6px 6px 0 var(--ink);
+    }
+    #game.visible {
+      opacity: 1;
+      transform: translateY(0) scale(1);
+    }
+
+    /* Chapter badge */
+    #path-tracker {
+      font-family: 'Unbounded', sans-serif;
+      font-size: 0.55rem;
+      font-weight: 700;
+      letter-spacing: 0.25em;
+      text-transform: uppercase;
+      color: #bbb;
+      margin-bottom: 1.2rem;
+    }
+
+    /* Ending badge */
+    #ending-badge {
+      display: none;
+      font-family: 'Unbounded', sans-serif;
+      font-size: 0.75rem;
+      font-weight: 700;
+      background: var(--yellow);
+      color: var(--ink);
+      padding: 0.35em 0.9em;
+      margin-bottom: 1.2rem;
+      letter-spacing: 0.03em;
+      border: 2px solid var(--ink);
+      box-shadow: 3px 3px 0 var(--ink);
+    }
+
+    /* Title */
+    #title {
+      font-family: 'Unbounded', sans-serif;
+      font-weight: 900;
+      font-size: clamp(1.3rem, 4vw, 2rem);
+      line-height: 1.15;
+      letter-spacing: -0.03em;
+      margin-bottom: 1.2rem;
+      color: var(--ink);
+    }
+
+    /* Story text */
+    #story-text {
+      font-size: 1rem;
+      line-height: 1.8;
+      font-weight: 300;
+      color: #333;
+      margin-bottom: 2rem;
+    }
+
+    /* ── CHOICES ── */
+    #choices {
+      display: flex;
+      flex-direction: column;
+      gap: 0.8rem;
+    }
+
+    .choice-btn {
+      background: var(--cream);
+      border: 2px solid var(--ink);
+      color: var(--ink);
+      font-family: 'DM Sans', sans-serif;
+      font-size: 0.95rem;
+      font-weight: 500;
+      padding: 1rem 1.2rem;
+      text-align: left;
+      cursor: pointer;
+      position: relative;
+      transition: all 0.18s ease;
+      box-shadow: 3px 3px 0 var(--ink);
+      opacity: 0;
+      animation: popIn 0.35s ease forwards;
+    }
+
+    @keyframes popIn {
+      from { opacity: 0; transform: translateY(6px); }
+      to   { opacity: 1; transform: translateY(0); }
+    }
+
+    .choice-btn:nth-child(1) { animation-delay: 0.05s; }
+    .choice-btn:nth-child(2) { animation-delay: 0.15s; }
+
+    .choice-btn:hover {
+      background: var(--ink);
+      color: var(--cream);
+      transform: translate(-2px, -2px);
+      box-shadow: 5px 5px 0 var(--orange);
+    }
+
+    .choice-btn.chosen {
+      background: var(--yellow);
+      transform: translate(3px, 3px);
+      box-shadow: none;
+    }
+
+    .replay-btn {
+      background: var(--orange);
+      color: var(--cream);
+      text-align: center;
+      font-family: 'Unbounded', sans-serif;
+      font-size: 0.7rem;
+      font-weight: 700;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      margin-top: 0.5rem;
+    }
+
+    .replay-btn:hover {
+      background: var(--ink);
+      color: var(--cream);
+      box-shadow: 5px 5px 0 var(--orange);
+    }
+
+    /* ── RORSCHACH DECO ── */
+    .ink-deco {
+      position: fixed;
+      pointer-events: none;
+      z-index: 0;
+      opacity: 0.04;
+    }
+    .ink-deco svg { width: 300px; height: 300px; }
+    .ink-left  { bottom: 80px; left: -60px; }
+    .ink-right { top: 80px; right: -60px; transform: scaleX(-1); }
+
+    /* ── FOOTER ── */
+    footer {
+      margin-top: 2rem;
+      font-family: 'Unbounded', sans-serif;
+      font-size: 0.5rem;
+      letter-spacing: 0.25em;
+      text-transform: uppercase;
+      color: #bbb;
+      text-align: center;
+      padding-bottom: 2rem;
+    }
+
+    @media (max-width: 500px) {
+      #game { padding: 1.5rem; }
+    }
+  </style>
+</head>
+<body>
+
+  <!-- Stripe header -->
+  <div class="stripe-bar">
+    <span class="s1"></span><span class="s2"></span><span class="s3"></span>
+    <span class="s4"></span><span class="s5"></span><span class="s6"></span>
+  </div>
+
+  <!-- Ink blot decorations -->
+  <div class="ink-deco ink-left">
+    <svg viewBox="0 0 200 200" xmlns="http://www.w3.org/2000/svg">
+      <ellipse cx="100" cy="100" rx="80" ry="60" fill="black"/>
+      <ellipse cx="60" cy="70" rx="30" ry="45" fill="black"/>
+      <ellipse cx="140" cy="70" rx="30" ry="45" fill="black"/>
+      <ellipse cx="100" cy="140" rx="20" ry="35" fill="black"/>
+      <ellipse cx="50" cy="120" rx="15" ry="25" fill="black" transform="rotate(-30 50 120)"/>
+      <ellipse cx="150" cy="120" rx="15" ry="25" fill="black" transform="rotate(30 150 120)"/>
+    </svg>
+  </div>
+  <div class="ink-deco ink-right">
+    <svg viewBox="0 0 200 200" xmlns="http://www.w3.org/2000/svg">
+      <ellipse cx="100" cy="100" rx="80" ry="60" fill="black"/>
+      <ellipse cx="60" cy="70" rx="30" ry="45" fill="black"/>
+      <ellipse cx="140" cy="70" rx="30" ry="45" fill="black"/>
+      <ellipse cx="100" cy="140" rx="20" ry="35" fill="black"/>
+    </svg>
+  </div>
+
+  <div id="wrapper">
+    <!-- Logo -->
+    <div class="logo-block">
+      <div class="logo-title">WAVELENGTH</div>
+      <div class="logo-sub">The Story Game — find the frequency</div>
+    </div>
+
+    <!-- Spectrum bar -->
+    <div class="spectrum-bar" id="spectrumBar">
+      <div class="spectrum-track" id="spectrumTrack">
+        <div class="spectrum-needle" id="needle" style="left: 50%"></div>
+      </div>
+      <div class="spectrum-labels" id="spectrumLabels">
+        <span id="labelLeft">—</span>
+        <span id="labelRight">—</span>
+      </div>
+    </div>
+
+    <!-- Clue display -->
+    <div class="clue-display" id="clueDisplay">
+      <span class="clue-label">Clue</span>
+      <span class="clue-word" id="clueWord"></span>
+    </div>
+
+    <!-- Game card -->
+    <main id="game">
+      <p id="path-tracker">Round 1</p>
+      <span id="ending-badge"></span>
+      <h1 id="title"></h1>
+      <p id="story-text"></p>
+      <div id="choices"></div>
+    </main>
+
+    <footer>8 possible psychic types &nbsp;·&nbsp; where does the needle land?</footer>
+  </div>
+
+  <!-- Stripe footer -->
+  <div class="stripe-bar bottom">
+    <span class="s6"></span><span class="s5"></span><span class="s4"></span>
+    <span class="s3"></span><span class="s2"></span><span class="s1"></span>
+  </div>
+
+  <script type="module">
+    import { startGame } from "./engine.js";
+    startGame();
+  </script>
+
+</body>
+</html>
